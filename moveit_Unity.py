@@ -228,7 +228,7 @@ class UnityPythonConnector(object):
         print(resp)
         return resp
 
-    def pickup_plan(self, request):
+    def pickup_plan(self, request, drop = False):
         # request contain the message of pick up pose and place pose 
         # we need to return path to pre pick up pose
         # plan to pick up 
@@ -242,7 +242,6 @@ class UnityPythonConnector(object):
         # to set up initial joint state we need to define the message as a jointState type msg       
         # setting up initial joint state 
         # 1 go to pre-pick up pose 
-        # pick_pose_rotation = copy.deepcopy(request.pick_pose.orientation)
         pick_pose = copy.deepcopy(request.pick_pose)
         request.pick_pose.position.z = 0.35
         # request.pick_pose.orientation = self.zero_rot
@@ -262,17 +261,22 @@ class UnityPythonConnector(object):
         # pick_pose.orientation = pick_pose_rotation # rotate to the state of the 
         plan = self.plan_trajectory(previous_ending_joint_angles, pick_pose)
         self.plans.append(plan)
+       
         # 3 come back to pre-place up pose 
         place_pose = copy.deepcopy(request.place_pose)
         request.place_pose.position.z = 0.35
         plan = self.plan_trajectory(previous_ending_joint_angles, request.place_pose)
         self.plans.append(plan)
+        if drop:
+            self.plans.append("open")
         previous_ending_joint_angles = plan.joint_trajectory.points[-1].positions
         # 4 come back to pre-pick up pose 
         # request.place_pose.position.z = 0.3
         plan = self.plan_trajectory(previous_ending_joint_angles, place_pose)
         self.plans.append(plan)
-        self.plans.append("open")
+
+        if not(drop):
+            self.plans.append("open")
         # go up
         previous_ending_joint_angles = plan.joint_trajectory.points[-1].positions
         plan = self.plan_trajectory(previous_ending_joint_angles, request.place_pose)
@@ -287,17 +291,7 @@ class UnityPythonConnector(object):
 
         resp.trajectories = self.plans
         print("I renturned trajectory")
-        # for p in self.plans:
-        #     self.plan_publisher.publish(p)
-        # try carthesian path
-        # wpose = self.move_group.get_current_pose().pose
-        # interpose = copy.deepcopy(request.pick_pose)
-        # interpose.position.x = 0.26
-        # interpose.position.z = -0.363
-        # points = [wpose, request.pick_pose, pick_pose, request.pick_pose, interpose, request.place_pose]
-        # plan = self.plan_cartesian_path(points)
-        # plans = [plan]
-        # resp.trajectories = plans
+
         self.execute_plans(self.plans)
         # return resp
 
@@ -335,15 +329,27 @@ class UnityPythonConnector(object):
         # pick_pose.orientation = pick_pose_rotation # rotate to the state of the 
         plan = self.plan_trajectory(previous_ending_joint_angles, pick_pose)
         self.plans.append(plan)
-        #knockdown
+        # post pick up pose
+        previous_ending_joint_angles = plan.joint_trajectory.points[-1].positions
+        plan = self.plan_trajectory(previous_ending_joint_angles, request.post_place_pose)
+        self.plans.append(plan)
+
+        
         previous_ending_joint_angles = plan.joint_trajectory.points[-1].positions
         # 4 come back to pre-pick up pose 
-        # request.place_pose.position.z = 0.3
-        request.place_pose.position.y += 0.11
-        request.place_pose.position.y -= 0.1
+        request.place_pose.position.y += 0.03
+
+        plan = self.plan_trajectory(previous_ending_joint_angles, request.place_pose)
+        self.plans.append(plan) 
+
+        previous_ending_joint_angles = plan.joint_trajectory.points[-1].positions
+        request.place_pose.position.y -= 0.13
 
         plan = self.plan_trajectory(previous_ending_joint_angles, request.place_pose)
         self.plans.append(plan)
+
+
+
         self.plans.append("open")
         # go up
         previous_ending_joint_angles = plan.joint_trajectory.points[-1].positions
@@ -375,8 +381,7 @@ class UnityPythonConnector(object):
             goal = franka_gripper.msg.MoveGoal(width=0.04, speed=1.0)
         else:
             goal = franka_gripper.msg.MoveGoal(width=0.068, speed=1.0)
-        #goal.width = 0.022
-        #goal.speed = 1.0
+  
         
         # Sends the goal to the action server.
         client.send_goal(goal)
@@ -387,35 +392,6 @@ class UnityPythonConnector(object):
         # Prints out the result of executing the action
         return client.get_result()  # A move result
 
-    def pick_no_place(self, request):
-        """
-        request to move around without picking or placing the objects
-        """
-        response = PandaManyPosesResponse()
-
-        # group_name = "arm"
-        # move_group = moveit_commander.MoveGroupCommander(group_name)
-
-        # current_robot_joint_configuration = request.current_joints
-        robot_poses = []
-        print(f"this is PICK AND PLACE \n request : {request} \n current state: {request.current_joints} ")
-
-        # Pre grasp - position gripper directly above target object
-        for i in range(len(request.poses)):
-            if (i == 0):
-                robot_poses.append(self.plan_trajectory(request.current_joints, request.poses[0]))
-
-                # robot_poses.append(plan_trajectory(move_group, req.poses[0], current_robot_joint_configuration))
-            else:
-                robot_poses.append(self.plan_trajectory(robot_poses[i-1].joint_trajectory.points[-1].positions, request.poses[i]))
-                # robot_poses.append(plan_trajectory(move_group, req.poses[i], robot_poses[i-1].joint_trajectory.points[-1].positions))
-        
-            if not robot_poses[i].joint_trajectory.points:
-                return response
-        response.trajectories = robot_poses
-        # If trajectory planning worked for all pick and place stages, add plan to response
-        print("im good boy i returned responsed")
-        return response
     
     def execute_plans(self, plans):
         # executes plans on the real world robot (or rviz robot)
@@ -437,7 +413,12 @@ def generate_knockover_request(which):
     request.place_pose.position.y = -0.3
     request.place_pose.position.x = .3
 
+    request.post_place_pose.position.z = .13
+    request.post_place_pose.position.y = -0.1
+    request.post_place_pose.position.x = .3
+
     request.place_pose.orientation = request.pick_pose.orientation
+    request.post_place_pose.orientation = request.pick_pose.orientation
 
     if which == "none" or which=="":
         request.pick_pose.position.z = 0.11
@@ -536,30 +517,30 @@ def generate_picknoplace(which):
 
 def initialize():
     try:
-        
-        tutorial = UnityPythonConnector()
-        # tutorial.add_box()
-        # coll = CollisionSceneExample()
-        # coll.add_table()
-        # add wall behind the robot 
-        # pose = [-0.6, 0, 0, 0, 0.707, 0, 0.707]
-        # dimensions = [1.2, 1.2, 0.0001]
-        # coll.add_table(pose, dimensions, "wall")
-        # # # add box to pick up
-        # # pose = [0.5, 0.2, 0.1, 0, 0., 0, 1]
-        # # dimensions = [0.03, 0.03, 0.03]
+       
+        # # add box to pick up
+        # pose = [0.5, 0.2, 0.1, 0, 0., 0, 1]
+        # dimensions = [0.03, 0.03, 0.03]
         # rot = Rotation.from_euler('xyz', [0, 0, 90], degrees=True)
         # rot = rot.as_quat()
         # pose = [0.38, 0, 0.02, rot[0], rot[1], rot[2], rot[3]] # in robot frame so table is Y 0
         # dimensions = [1.5, 0.28, 0.11] # this are dims for RViz not unity so X,Y,Z (Unity Z, X, Y) - possible to flip it 
         # coll.add_table(pose, dimensions, "carton_box")
+        # print("Ready to plan")
+        
+        tutorial = UnityPythonConnector()
         print("Ready to plan")
         s = rospy.Service('moveit_many', PandaSimpleService, tutorial.go_to_pose_goal) # go_to_pose_goal
         s2 = rospy.Service('panda_move', PandaPickUp, tutorial.pickup_plan)
-        s3 = rospy.Service('waypoints_service', PandaManyPoses, tutorial.pick_no_place)
+        # s3 = rospy.Service('waypoints_service', PandaManyPoses, tutorial.pick_no_place)
         sub1 = rospy.Subscriber('plan_publisher', moveit_msgs.msg.RobotTrajectory, tutorial.execute_plans)
         sub2 = rospy.Subscriber('realrobot_publisher', moveit_msgs.msg.RobotTrajectory, tutorial.execute_plans)
-
+        coll = CollisionSceneExample()
+        # coll.add_table()
+        # add wall behind the robot 
+        pose = [0, 0, 0, 0, 0, 0, 1.0]
+        dimensions = [1.2, 1.2, 0.0001]
+        coll.add_table(pose, dimensions, "wall")
         # s4 = rospy.Service('waypoints_service', moveit_msgs.msg.RobotTrajectory, tutorial.execute_plans)
         # rospy.spin()
         while not is_shutdown():
@@ -577,10 +558,11 @@ def initialize():
                 request = generate_knockover_request(which)
                 # tutorial.pickup_plan(request)
                 tutorial.knock_down_plan(request)
-            if action=="nopick":
+            if action=="noplace":
                 which = input("which one?")
                 request = generate_picknoplace(which)
-                tutorial.pickup_plan(request)
+                drop = True if input("drop?") == "yes" else False
+                tutorial.pickup_plan(request, drop = drop)
         return
     except rospy.ROSInterruptException:
         return
