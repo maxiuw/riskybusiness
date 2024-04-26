@@ -378,7 +378,7 @@ class UnityPythonConnector(object):
 
         # Creates a goal to send to the action server.
         if movement == "close":
-            goal = franka_gripper.msg.MoveGoal(width=0.04, speed=1.0)
+            goal = franka_gripper.msg.MoveGoal(width=0.041, speed=1.0)
         else:
             goal = franka_gripper.msg.MoveGoal(width=0.068, speed=1.0)
   
@@ -494,25 +494,25 @@ def generate_picknoplace(which):
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.53
 
-        request.place_pose.position.z = .13
+        request.place_pose.position.z = .203
         request.place_pose.position.y = -0.3
-        request.place_pose.position.x = .6
+        request.place_pose.position.x = .3
     if which == "two" or which=="2":
         request.pick_pose.position.z = 0.12
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.43
 
-        request.place_pose.position.z = .13
+        request.place_pose.position.z = .203
         request.place_pose.position.y = -0.3
-        request.place_pose.position.x = .6
+        request.place_pose.position.x = .3
     if which == "three" or which=="3":
         request.pick_pose.position.z = 0.12
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.63
 
-        request.place_pose.position.z = .13
+        request.place_pose.position.z = .203
         request.place_pose.position.y = -0.3
-        request.place_pose.position.x = .6
+        request.place_pose.position.x = .3
     return request
 
 def initialize():
