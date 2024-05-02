@@ -334,7 +334,6 @@ class UnityPythonConnector(object):
         self.execute_plans([plan])        
         self.execute_plans(["close"])            
         # pint 2.5 just pick up
-        # pick_pose.orientation = pick_pose_rotation # rotate to the state of the 
 
         (plan, fraction) = self.move_group.compute_cartesian_path(
                                    [pick_pose],   # waypoints to follow
@@ -343,14 +342,24 @@ class UnityPythonConnector(object):
         self.execute_plans([plan])        
         # 3 come back to pre-place up pose 
         place_pose = copy.deepcopy(request.place_pose)
+        drop_pose = copy.deepcopy(request.place_pose)
         request.place_pose.position.z = 0.35
+        if drop:
+            drop_pose.position.z = 0.3
+            drop_pose.position.y += 0.15
+            drop_pose.position.x += 0.15
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                   [drop_pose],   # waypoints to follow
+                                   0.01,        # eef_step
+                                   0.0)  
+            self.execute_plans([plan]) 
+            self.execute_plans(["open"])  
         (plan, fraction) = self.move_group.compute_cartesian_path(
                                    [request.place_pose],   # waypoints to follow
                                    0.01,        # eef_step
                                    0.0)  
         self.execute_plans([plan])  
-        if drop:
-            self.execute_plans(["open"])
+        
         # 4 come back to pre-pick up pose
         (plan, fraction) = self.move_group.compute_cartesian_path(
                                    [place_pose],   # waypoints to follow
@@ -379,7 +388,9 @@ class UnityPythonConnector(object):
 
         
 
-    def knock_down_plan(self, request):
+  
+
+    def knock_down_plan(self, request, request2, place):
         # request contain the message of pick up pose and place pose 
         # we need to return path to pre pick up pose
         # plan to pick up 
@@ -389,14 +400,43 @@ class UnityPythonConnector(object):
         # print(request.pick_pose)
         self.plans = []
         resp = PandaPickUpResponse()
+        if place == "place":
+            pick_pose = copy.deepcopy(request.pick_pose)
+            request.pick_pose.position.z = 0.35
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [request.pick_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0)  
+            self.execute_plans([plan])        
+
+
+            # 2 pick up pose 
+            # pick_pose.position.z = 0.23
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [pick_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0)  
+            self.execute_plans([plan])        
+            self.execute_plans(["close"])  
+                  
+            # pint 2.5 just pick up
+
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [pick_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0)  
+            self.execute_plans([plan])      
+        waypoints = []    
         request.pick_pose.position.z = 0.35
         pick_pose = copy.deepcopy(request.pick_pose)
         place_pose = copy.deepcopy(request.post_place_pose)
         place_pose.position.y += 0.03
-        waypoints = [request.pick_pose , pick_pose, request.pick_pose, request.post_place_pose, place_pose]
+        if place != "place":
+            waypoints.append(request.pick_pose)
+        waypoints = [pick_pose, request.pick_pose, request.post_place_pose, place_pose]
         request.place_pose.position.y -= 0.13
         waypoints.append(request.place_pose)
-
+        
         request.pick_pose.position.z = 0.4
         request.pick_pose.position.x = 0.3
         waypoints.append(request.pick_pose)
@@ -405,7 +445,59 @@ class UnityPythonConnector(object):
                                    0.01,        # eef_step
                                    0.0) 
         self.execute_plans([plan])  
+        if place == "place":
+             (plan, fraction) = self.move_group.compute_cartesian_path(
+                                   [pick_pose],   # waypoints to follow
+                                   0.01,        # eef_step
+                                   0.0)  
+        self.execute_plans([plan])        
+        # if place != "place":
+        #     # 3 come back to pre-place up pose 
+        #     place_pose = copy.deepcopy(request.place_pose)
+        #     request.place_pose.position.z = 0.35
+        #     (plan, fraction) = self.move_group.compute_cartesian_path(
+        #                                [request.place_pose],   # waypoints to follow
+        #                                0.01,        # eef_step
+        #                                0.0)  
+        #     self.execute_plans([plan])  
+        #     request2.pick_pose.position.z = 0.4
+        #     request2.pick_pose.position.x = 0.3
+        #     print("I renturned trajectory")
+             
+        #     (plan, fraction) = self.move_group.compute_cartesian_path(
+        #                             [request2.pick_pose],   # waypoints to follow
+        #                             0.01,        # eef_step
+        #                             0.0) 
+        #     self.execute_plans([plan]) 
 
+        if place == "place":
+            # 4 come back to pre-pick up pose
+            
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [request2.place_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0) 
+            self.execute_plans([plan]) 
+
+            
+            self.execute_plans(["open"])
+            request2.place_pose.position.z = 0.3
+            # 4 come back to pre-pick up pose
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [request2.place_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0) 
+            self.execute_plans([plan]) 
+
+            request2.pick_pose.position.z = 0.4
+            request2.pick_pose.position.x = 0.3
+            print("I renturned trajectory")
+             
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [request2.pick_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0) 
+            self.execute_plans([plan]) 
 
     def move_gripper(self, movement="open"):
         
@@ -418,7 +510,7 @@ class UnityPythonConnector(object):
 
         # Creates a goal to send to the action server.
         if movement == "close":
-            goal = franka_gripper.msg.MoveGoal(width=0.0403, speed=1.0)
+            goal = franka_gripper.msg.MoveGoal(width=0.0405, speed=.1)
         else:
             goal = franka_gripper.msg.MoveGoal(width=0.068, speed=1.0)
   
@@ -449,6 +541,7 @@ def generate_knockover_request(which):
     request.pick_pose.orientation.y =  -0.3150869
     request.pick_pose.orientation.z =  0.0
     request.pick_pose.orientation.w =  -0.0848662
+    
     request.place_pose.position.z = .13
     request.place_pose.position.y = -0.3
     request.place_pose.position.x = .3
@@ -467,17 +560,17 @@ def generate_knockover_request(which):
 
         
     if which == "one" or which=="1":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.11
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.53
 
     if which == "two" or which=="2":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.11
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.43
 
     if which == "three" or which=="3":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.11
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.63
 
@@ -522,6 +615,8 @@ def generate_request(which, height):
         request.place_pose.position.z = .17
     if height == "three" or height=="3":
         request.place_pose.position.z = .203
+    if height == "four" or height=="4":
+        request.place_pose.position.z = .238
     return request
 
 def generate_picknoplace(which):
@@ -558,6 +653,9 @@ def generate_picknoplace(which):
         request.place_pose.position.z = .203
         request.place_pose.position.y = -0.3
         request.place_pose.position.x = .3
+
+
+
     return request
 
 def initialize():
@@ -579,31 +677,36 @@ def initialize():
         # s4 = rospy.Service('waypoints_service', moveit_msgs.msg.RobotTrajectory, tutorial.execute_plans)
         # rospy.spin()
         while not is_shutdown():
-            print("What do you want to do?")
+            print("What do you want to do? Options: p(ickup), g(ripper), k(nockover), no(place)")
             action = input()
             # pickup and place, first asking which position (1,2,3) we pick up from
             # second one is the height (1,2,3)
-            if action=="pickup":
+            if action=="pickup" or action=="p":
+                print("# pickup and place, first asking which position (1,2,3) we pick up from \\ # second one is the height (1,2,3)")
                 which = input("which one?")
                 height = input("which height?")
                 request = generate_request(which, height)
                 tutorial.pickup_plan_cartesian(request)
             # open or close the gripper
-            if action == "gripper":
+            if action == "gripper" or action == "g":
+                print("# open or close the gripper")
                 which = input("which one?")
                 if which == "close":
                     tutorial.move_gripper('close')
                 else:
                     tutorial.move_gripper('open')
             # knock over the tower pickup first then knock over (1,2,3)
-            if action == "knockover":
+            if action == "knockover" or action == "k":
+                print("# knock over the tower pickup first then knock over (1,2,3)")
                 which = input("which one?")
+                place = input("place or drop")
                 request = generate_knockover_request(which)
                 # tutorial.pickup_plan(request)
-                tutorial.knock_down_plan(request)
+                tutorial.knock_down_plan(request, copy.deepcopy(request), place)
             # pick up and place without changing the height
             # pick up (1,2,3) and drop ('yes' or nothing) from the height
-            if action=="noplace":
+            if action=="noplace" or action=="no":
+                print("# pick up and place without changing the height \\ # pick up (1,2,3) and drop ('yes' or nothing) from the height")
                 which = input("which one?")
                 request = generate_picknoplace(which)
                 drop = True if input("drop?") == "yes" else False
