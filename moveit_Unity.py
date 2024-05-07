@@ -336,14 +336,14 @@ class UnityPythonConnector(object):
         # pint 2.5 just pick up
 
         (plan, fraction) = self.move_group.compute_cartesian_path(
-                                   [pick_pose],   # waypoints to follow
+                                   [request.pick_pose],   # waypoints to follow
                                    0.01,        # eef_step
                                    0.0)  
         self.execute_plans([plan])        
         # 3 come back to pre-place up pose 
         place_pose = copy.deepcopy(request.place_pose)
         drop_pose = copy.deepcopy(request.place_pose)
-        request.place_pose.position.z = 0.35
+        request.place_pose.position.z += 0.1
         if drop:
             drop_pose.position.z = 0.3
             drop_pose.position.y += 0.15
@@ -353,29 +353,30 @@ class UnityPythonConnector(object):
                                    0.01,        # eef_step
                                    0.0)  
             self.execute_plans([plan]) 
-            self.execute_plans(["open"])  
-        (plan, fraction) = self.move_group.compute_cartesian_path(
-                                   [request.place_pose],   # waypoints to follow
-                                   0.01,        # eef_step
-                                   0.0)  
-        self.execute_plans([plan])  
-        
-        # 4 come back to pre-pick up pose
-        (plan, fraction) = self.move_group.compute_cartesian_path(
-                                   [place_pose],   # waypoints to follow
-                                   0.01,        # eef_step
-                                   0.0) 
-        self.execute_plans([plan]) 
+            self.execute_plans(["open"]) 
+        else: 
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                       [request.place_pose],   # waypoints to follow
+                                       0.01,        # eef_step
+                                       0.0)  
+            self.execute_plans([plan])  
 
-        if not(drop):
+            # 4 come back to pre-pick up pose
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                       [place_pose],   # waypoints to follow
+                                       0.01,        # eef_step
+                                       0.0) 
+            self.execute_plans([plan]) 
+
+
             self.execute_plans(["open"])
-        place_pose.position.z = 0.3
-        # 4 come back to pre-pick up pose
-        (plan, fraction) = self.move_group.compute_cartesian_path(
-                                   [place_pose],   # waypoints to follow
-                                   0.01,        # eef_step
-                                   0.0) 
-        self.execute_plans([plan]) 
+            place_pose.position.z += 0.1
+            # 4 come back to pre-pick up pose
+            (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [place_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0) 
+            self.execute_plans([plan]) 
 
         request.pick_pose.position.z = 0.4
         request.pick_pose.position.x = 0.3
@@ -510,9 +511,9 @@ class UnityPythonConnector(object):
 
         # Creates a goal to send to the action server.
         if movement == "close":
-            goal = franka_gripper.msg.MoveGoal(width=0.0405, speed=.1)
+            goal = franka_gripper.msg.MoveGoal(width=0.05, speed=.1) #0.0405
         else:
-            goal = franka_gripper.msg.MoveGoal(width=0.068, speed=1.0)
+            goal = franka_gripper.msg.MoveGoal(width=0.088, speed=1.0) #0.068
   
         
         # Sends the goal to the action server.
@@ -542,11 +543,11 @@ def generate_knockover_request(which):
     request.pick_pose.orientation.z =  0.0
     request.pick_pose.orientation.w =  -0.0848662
     
-    request.place_pose.position.z = .13
+    request.place_pose.position.z = .16
     request.place_pose.position.y = -0.3
     request.place_pose.position.x = .3
 
-    request.post_place_pose.position.z = .13
+    request.post_place_pose.position.z = 0.16
     request.post_place_pose.position.y = -0.1
     request.post_place_pose.position.x = .3
 
@@ -554,23 +555,23 @@ def generate_knockover_request(which):
     request.post_place_pose.orientation = request.pick_pose.orientation
 
     if which == "none" or which=="":
-        request.pick_pose.position.z = 0.11
+        request.pick_pose.position.z = 0.16
         request.pick_pose.position.y = -0.1
         request.pick_pose.position.x = 0.53
 
         
     if which == "one" or which=="1":
-        request.pick_pose.position.z = 0.11
+        request.pick_pose.position.z = 0.16
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.53
 
     if which == "two" or which=="2":
-        request.pick_pose.position.z = 0.11
+        request.pick_pose.position.z = 0.16
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.43
 
     if which == "three" or which=="3":
-        request.pick_pose.position.z = 0.11
+        request.pick_pose.position.z = 0.16
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.63
 
@@ -587,7 +588,7 @@ def generate_request(which, height):
     request.place_pose.orientation = request.pick_pose.orientation
 
     if which == "one" or which=="1":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.15
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.53
 
@@ -595,14 +596,14 @@ def generate_request(which, height):
         request.place_pose.position.y = -0.3
         request.place_pose.position.x = .3
     if which == "two" or which=="2":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.15
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.43
 
         request.place_pose.position.y = -0.3
         request.place_pose.position.x = .3
     if which == "three" or which=="3":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.15
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.63
 
@@ -610,13 +611,13 @@ def generate_request(which, height):
         request.place_pose.position.x = .3
     
     if height == "one" or height=="1":
-        request.place_pose.position.z = 0.12
+        request.place_pose.position.z = 0.15
     if height == "two" or height=="2":
-        request.place_pose.position.z = .17
+        request.place_pose.position.z = .25
     if height == "three" or height=="3":
-        request.place_pose.position.z = .203
+        request.place_pose.position.z = .318
     if height == "four" or height=="4":
-        request.place_pose.position.z = .238
+        request.place_pose.position.z = .41
     return request
 
 def generate_picknoplace(which):
@@ -630,7 +631,7 @@ def generate_picknoplace(which):
     request.place_pose.orientation = request.pick_pose.orientation
 
     if which == "one" or which=="1":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.16
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.53
 
@@ -638,7 +639,7 @@ def generate_picknoplace(which):
         request.place_pose.position.y = -0.3
         request.place_pose.position.x = .3
     if which == "two" or which=="2":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.16
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.43
 
@@ -646,7 +647,7 @@ def generate_picknoplace(which):
         request.place_pose.position.y = -0.3
         request.place_pose.position.x = .3
     if which == "three" or which=="3":
-        request.pick_pose.position.z = 0.12
+        request.pick_pose.position.z = 0.16
         request.pick_pose.position.y = -0.02
         request.pick_pose.position.x = 0.63
 
@@ -709,7 +710,7 @@ def initialize():
                 print("# pick up and place without changing the height \\ # pick up (1,2,3) and drop ('yes' or nothing) from the height")
                 which = input("which one?")
                 request = generate_picknoplace(which)
-                drop = True if input("drop?") == "yes" else False
+                drop = True if (input("drop?") == "yes" or input("drop?") == "yes") else False
                 tutorial.pickup_plan_cartesian(request, drop = drop)
         return
     except rospy.ROSInterruptException:
