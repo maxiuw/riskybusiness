@@ -673,41 +673,85 @@ def initialize():
         coll.add_table(pose, dimensions, "wall")
         # s4 = rospy.Service('waypoints_service', moveit_msgs.msg.RobotTrajectory, tutorial.execute_plans)
         # rospy.spin()
+
+        print("Do you want to run in debug mode or trial mode? DEBUG/TRIAL")
+        mode = input()
+        if not mode in {"DEBUG", "TRIAL"}:
+              raise Exception("Sorry, not a valid mode.")
+        
+
         while not is_shutdown():
-            print("What do you want to do? Options: p(ickup), g(ripper), k(nockover), no(place)")
-            action = input()
-            # pickup and place, first asking which position (1,2,3) we pick up from
-            # second one is the height (1,2,3)
-            if action=="pickup" or action=="p":
-                print("# pickup and place, first asking which position (1,2,3) we pick up from \\ # second one is the height (1,2,3)")
-                which = input("which one?")
-                height = input("which height?")
-                request = generate_request(which, height)
-                tutorial.pickup_plan_cartesian(request)
-            # open or close the gripper
-            if action == "gripper" or action == "g":
-                print("# open or close the gripper")
-                which = input("which one?")
-                if which == "close":
-                    tutorial.move_gripper('close')
+
+            if mode == "TRIAL":
+                print("Type in the current randomized condition, follow by the current turn, e.g., \"A2\", \"a2\", \"C4\"\"c4\".")
+                action = input()
+                # One block on table, pick up block 1 and place it
+                if action in {"A2", "a2", "B2", "b2", "E2", "e2"}:
+                    request = generate_request("1", "2")
+                    tutorial.pickup_plan_cartesian(request)
+                # One block on table, pick up block 1 but drop it
+                elif action in {"C2", "c2", "F2", "f2"}:   
+                    request = generate_picknoplace("1")
+                    tutorial.pickup_plan_cartesian(request, drop = True)
+                # one block on table, pickup block 1, knockover  stack, and drop the block you're holding
+                elif action in {"D2", "d2", "G2", "g2", "H2", "h2"}:
+                    request = generate_knockover_request("1")
+                    tutorial.knock_down_plan(request, copy.deepcopy(request), "drop")
+
+                # three blocks on table, pick up block 2 and place it
+                elif action in {"A4", "a4"}:
+                    request = generate_request("2", "4")
+                    tutorial.pickup_plan_cartesian(request)
+                # One block on table, pick up block 2 but drop it
+                elif action in {"G4", "g4"}:   
+                    request = generate_picknoplace("2")
+                    tutorial.pickup_plan_cartesian(request, drop = True)
+                # some blocks on table, pickup block 2, knockover  stack, and drop the block you're holding
+                elif action in {"B4", "b4", "C4", "c4" "D4", "d4"}:
+                    request = generate_knockover_request("2")
+                    tutorial.knock_down_plan(request, copy.deepcopy(request), "drop")
+                # some blocks on table, pickup block 2, knockover  stack, and stack the block you're holding
+                elif action in {"E4", "e4" "F4", "f4", "H4", "h4"}:
+                    request = generate_knockover_request("2")
+                    tutorial.knock_down_plan(request, copy.deepcopy(request), "place")
                 else:
-                    tutorial.move_gripper('open')
-            # knock over the tower pickup first then knock over (1,2,3)
-            if action == "knockover" or action == "k":
-                print("# knock over the tower pickup first then knock over (1,2,3)")
-                which = input("which one?")
-                place = input("place or drop")
-                request = generate_knockover_request(which)
-                # tutorial.pickup_plan(request)
-                tutorial.knock_down_plan(request, copy.deepcopy(request), place)
-            # pick up and place without changing the height
-            # pick up (1,2,3) and drop ('yes' or nothing) from the height
-            if action=="noplace" or action=="no":
-                print("# pick up and place without changing the height \\ # pick up (1,2,3) and drop ('yes' or nothing) from the height")
-                which = input("which one?")
-                request = generate_picknoplace(which)
-                drop = True if (input("drop?") == "yes" or input("drop?") == "yes") else False
-                tutorial.pickup_plan_cartesian(request, drop = drop)
+                    print("You entered an invalid condition/turn. Conditions are A, B, C, D, E, F, G and H. Turns are 1 and 2. Please try again.")
+
+            if mode == "DEBUG":
+                print("What do you want to do? Options: p(ickup), g(ripper), k(nockover), no(place)")
+                action = input()
+                # pickup and place, first asking which position (1,2,3) we pick up from
+                # second one is the height (1,2,3)
+                if action=="pickup" or action=="p":
+                    print("# pickup and place, first asking which position (1,2,3) we pick up from \\ # second one is the height (1,2,3)")
+                    which = input("which one?")
+                    height = input("which height?")
+                    request = generate_request(which, height)
+                    tutorial.pickup_plan_cartesian(request)
+                # open or close the gripper
+                if action == "gripper" or action == "g":
+                    print("# open or close the gripper")
+                    which = input("which one?")
+                    if which == "close":
+                        tutorial.move_gripper('close')
+                    else:
+                        tutorial.move_gripper('open')
+                # knock over the tower pickup first then knock over (1,2,3)
+                if action == "knockover" or action == "k":
+                    print("# knock over the tower pickup first then knock over (1,2,3)")
+                    which = input("which one?")
+                    place = input("place or drop")
+                    request = generate_knockover_request(which)
+                    # tutorial.pickup_plan(request)
+                    tutorial.knock_down_plan(request, copy.deepcopy(request), place)
+                # pick up and place without changing the height
+                # pick up (1,2,3) and drop ('yes' or nothing) from the height
+                if action=="noplace" or action=="no":
+                    print("# pick up and place without changing the height \\ # pick up (1,2,3) and drop ('yes' or nothing) from the height")
+                    which = input("which one?")
+                    request = generate_picknoplace(which)
+                    drop = True if (input("drop?") == "yes" or input("drop?") == "yes") else False
+                    tutorial.pickup_plan_cartesian(request, drop = drop)
         return
     except rospy.ROSInterruptException:
         return
