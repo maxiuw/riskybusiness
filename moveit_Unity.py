@@ -683,7 +683,7 @@ def initialize():
         while not is_shutdown():
 
             if mode == "TRIAL":
-                print("Type in the current randomized condition, follow by the current turn, e.g., \"A2\", \"a2\", \"C4\"\"c4\".")
+                print("Type in the current randomized condition, follow by the current turn, e.g., \"A2\", \"a2\", \"C4\",\"c4\".")
                 action = input()
                 # One block on table, pick up block 1 and place it
                 if action in {"A2", "a2", "B2", "b2", "E2", "e2"}:
@@ -707,11 +707,11 @@ def initialize():
                     request = generate_picknoplace("2")
                     tutorial.pickup_plan_cartesian(request, drop = True)
                 # some blocks on table, pickup block 2, knockover  stack, and drop the block you're holding
-                elif action in {"B4", "b4", "C4", "c4" "D4", "d4"}:
+                elif action in {"B4", "b4", "C4", "c4", "D4", "d4"}:
                     request = generate_knockover_request("2")
                     tutorial.knock_down_plan(request, copy.deepcopy(request), "drop")
                 # some blocks on table, pickup block 2, knockover  stack, and stack the block you're holding
-                elif action in {"E4", "e4" "F4", "f4", "H4", "h4"}:
+                elif action in {"E4", "e4", "F4", "f4", "H4", "h4"}:
                     request = generate_knockover_request("2")
                     tutorial.knock_down_plan(request, copy.deepcopy(request), "place")
                 else:
