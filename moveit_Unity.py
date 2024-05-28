@@ -687,32 +687,32 @@ def initialize():
                 action = input()
                 # One block on table, pick up block 1 and place it
                 if action in {"A2", "B2", "E2"}:
-                    request = generate_request(1, 2)
+                    request = generate_request("1", "2")
                     tutorial.pickup_plan_cartesian(request)
                 # One block on table, pick up block 1 but drop it
                 elif action in {"C2", "F2"}:   
-                    request = generate_picknoplace(1)
+                    request = generate_picknoplace("1")
                     tutorial.pickup_plan_cartesian(request, drop = True)
                 # one block on table, pickup block 1, knockover  stack, and drop the block you're holding
                 elif action in {"D2", "G2", "H2"}:
-                    request = generate_knockover_request(1)
+                    request = generate_knockover_request("1")
                     tutorial.knock_down_plan(request, copy.deepcopy(request), "drop")
 
                 # three blocks on table, pick up block 2 and place it
                 elif action in {"A4"}:
-                    request = generate_request(2, 4)
+                    request = generate_request("2", "4")
                     tutorial.pickup_plan_cartesian(request)
                 # One block on table, pick up block 2 but drop it
                 elif action in {"G4"}:   
-                    request = generate_picknoplace(2)
+                    request = generate_picknoplace("2")
                     tutorial.pickup_plan_cartesian(request, drop = True)
                 # some blocks on table, pickup block 2, knockover  stack, and drop the block you're holding
                 elif action in {"B4", "C4", "D4"}:
-                    request = generate_knockover_request(2)
+                    request = generate_knockover_request("2")
                     tutorial.knock_down_plan(request, copy.deepcopy(request), "drop")
                 # some blocks on table, pickup block 2, knockover  stack, and stack the block you're holding
                 elif action in {"E4", "F4", "H4"}:
-                    request = generate_knockover_request(2)
+                    request = generate_knockover_request("2")
                     tutorial.knock_down_plan(request, copy.deepcopy(request), "place")
                 else:
                     print("You entered an invalid condition/turn. Conditions are A, B, C, D, E, F, G and H. Turns are 1 and 2. Please try again.")
