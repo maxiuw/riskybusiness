@@ -42,6 +42,7 @@ from std_msgs.msg import String
 from moveit_commander.conversions import pose_to_list
 from panda_msgs.srv import PandaSimpleService, PandaSimpleServiceResponse, PandaPickUp, PandaPickUpResponse, PandaManyPoses, PandaManyPosesResponse, PandaManyPosesRequest
 from panda_msgs.msg import FloatList
+from std_srvs.srv import Empty, EmptyResponse
 from collision_scene_example import CollisionSceneExample 
 from scipy.spatial.transform import Rotation
 import franka_gripper.msg
@@ -182,6 +183,8 @@ class UnityPythonConnector(object):
         # self.add_plane_to_the_scene()
         # self.add_box() # adding table to the plannig space
         self.stackofplans = [] 
+        
+        self.start_joint_state = self.generate_JointMsg([0, -pi/4, 0, -3 * pi/4, 0, pi/2, pi/4])
 
     def generate_JointMsg(self, joints):
         # returns the message with joint states in the form RobotState accepts it 
@@ -344,39 +347,39 @@ class UnityPythonConnector(object):
         place_pose = copy.deepcopy(request.place_pose)
         drop_pose = copy.deepcopy(request.place_pose)
         request.place_pose.position.z += 0.1
-        if drop:
-            drop_pose.position.z = 0.3
-            drop_pose.position.y += 0.15
-            drop_pose.position.x += 0.15
-            (plan, fraction) = self.move_group.compute_cartesian_path(
-                                   [drop_pose],   # waypoints to follow
-                                   0.01,        # eef_step
-                                   0.0)  
-            self.execute_plans([plan]) 
-            self.execute_plans(["open"]) 
-        else: 
-            (plan, fraction) = self.move_group.compute_cartesian_path(
-                                       [request.place_pose],   # waypoints to follow
-                                       0.01,        # eef_step
-                                       0.0)  
-            self.execute_plans([plan])  
+        # if drop:
+        #     drop_pose.position.z = 0.3
+        #     drop_pose.position.y += 0.15
+        #     drop_pose.position.x += 0.15
+        #     (plan, fraction) = self.move_group.compute_cartesian_path(
+        #                            [drop_pose],   # waypoints to follow
+        #                            0.01,        # eef_step
+        #                            0.0)  
+        #     self.execute_plans([plan]) 
+        #     self.execute_plans(["open"]) 
+        # else: 
+        (plan, fraction) = self.move_group.compute_cartesian_path(
+                                    [request.place_pose],   # waypoints to follow
+                                    0.01,        # eef_step
+                                    0.0)  
+        self.execute_plans([plan])  
 
-            # 4 come back to pre-pick up pose
-            (plan, fraction) = self.move_group.compute_cartesian_path(
-                                       [place_pose],   # waypoints to follow
-                                       0.01,        # eef_step
-                                       0.0) 
-            self.execute_plans([plan]) 
-
-
-            self.execute_plans(["open"])
-            place_pose.position.z += 0.1
-            # 4 come back to pre-pick up pose
-            (plan, fraction) = self.move_group.compute_cartesian_path(
+        # 4 come back to pre-pick up pose
+        (plan, fraction) = self.move_group.compute_cartesian_path(
                                     [place_pose],   # waypoints to follow
                                     0.01,        # eef_step
                                     0.0) 
-            self.execute_plans([plan]) 
+        self.execute_plans([plan]) 
+
+
+        self.execute_plans(["open"])
+        place_pose.position.z += 0.1
+        # 4 come back to pre-pick up pose
+        (plan, fraction) = self.move_group.compute_cartesian_path(
+                                [place_pose],   # waypoints to follow
+                                0.01,        # eef_step
+                                0.0) 
+        self.execute_plans([plan]) 
 
         request.pick_pose.position.z = 0.4
         request.pick_pose.position.x = 0.3
@@ -537,6 +540,23 @@ class UnityPythonConnector(object):
                 continue
             self.move_group.execute(plan)
         # pass
+
+    def reset_robot(self, request):
+        # Copy class variables to local variables to make the web tutorials more clear.
+        # In practice, you should use the class variables directly unless you have a good
+        # reason not to.
+        # print("service was called")
+        move_group = self.move_group
+        # to set up initial joint state we need to define the message as a jointState type msg
+        #current_joint_state = self.move_group.get_current_joint_values()
+        #self.move_group.set_start_state(current_joint_state.)     
+
+        resp = EmptyResponse()
+        move_group.go(self.start_joint_state, wait=True)
+        move_group.stop()
+        
+        return resp
+    
     
 def generate_knockover_request(which):
     request = PandaManyPosesRequest()
@@ -629,7 +649,7 @@ def generate_picknoplace(which):
 
     request.place_pose.orientation = request.pick_pose.orientation
 
-    request.place_pose.position.z = .203
+    request.place_pose.position.z = 0.4 
     request.place_pose.position.y = -0.3
     request.place_pose.position.x = .48 #.3
     if which == "one" or which=="1":
@@ -662,6 +682,7 @@ def initialize():
         print("Ready to plan")
         s = rospy.Service('moveit_many', PandaSimpleService, tutorial.go_to_pose_goal) # go_to_pose_goal
         s2 = rospy.Service('panda_move', PandaPickUp, tutorial.pickup_plan)
+        s3 = rospy.Service('reset_robot', Empty, tutorial.reset_robot)
         # s3 = rospy.Service('waypoints_service', PandaManyPoses, tutorial.pick_no_place)
         sub1 = rospy.Subscriber('plan_publisher', moveit_msgs.msg.RobotTrajectory, tutorial.execute_plans)
         sub2 = rospy.Subscriber('realrobot_publisher', moveit_msgs.msg.RobotTrajectory, tutorial.execute_plans)
@@ -745,7 +766,7 @@ def initialize():
                     # tutorial.pickup_plan(request)
                     tutorial.knock_down_plan(request, copy.deepcopy(request), place)
                 # pick up and place without changing the height
-                # pick up (1,2,3) and drop ('yes' or nothing) from the height
+                # pick up (1,2,3) and drop ('yes' or nothing) from the heightmove_gripper
                 if action=="noplace" or action=="no":
                     print("# pick up and place without changing the height \\ # pick up (1,2,3) and drop ('yes' or nothing) from the height")
                     which = input("which one?")
